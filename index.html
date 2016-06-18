@@ -3,7 +3,7 @@
 
 <head>
     <meta charset=utf-8 />
-    <title>Lab 09 Template</title>
+    <title>Lesson 09 MAP672 Spring 2016</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 
     <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
@@ -15,9 +15,10 @@
         body {
             margin: 0;
             padding: 0;
-            background: whitesmoke;
+            background: #242426;
             font-family: Lato, sans-serif;
             color: #0D0000;
+
         }
         header {
             padding: 6px 10%;
@@ -25,16 +26,19 @@
         h1 {
             display: inline-block;
             margin-right: 20px;
-            color: #001323;
+            color: #FFFFFF;
         }
         h2 {
             display: inline-block;
-            color: #001323;
+            color: #FFFFFF;
         }
         #map {
             width: 80%;
             height: 540px;
             margin: 10px auto;
+            border: solid;
+            border-width: 1px;
+            border-color: whitesmoke
         }
         footer {
             padding: 6px 10%;
@@ -42,22 +46,24 @@
         }
         p {
             font-size: 1em;
-            color: #001323;
+            color: #FFFFFF;
         }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Map Title</h1>
-        <h2>Map Subtitle</h2>
+        <h1>U.S. Power Plants  </h1>
+        <h2>Energy Across America</h2>
     </header>
 
     <div id='map'></div>
 
     <footer>
-        <p>Map authored by YOUR NAME</p>
-        <p>Additional information about the data and map goes here.</p>
+        <p>Map authored by Tyler Hegwood</p>
+        <p>Click a point on the map to discover power plants within 500 kilometers.</p>
+        <p>The above map illustrates the location as well as energy output capacities in megawatts. The marker size is dictated by the plant's 
+        capacity for production. Three fuel types of energy production are illustrated, Hydro, Petroleum and Nuclear. Data is sourced from the U.S. Energy Information Administration (eia.gov).</p>
     </footer>
 
     <script src="power-plants.js"></script>
@@ -71,10 +77,114 @@
       var tiles = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
           subdomains: 'abcd',
-          maxZoom: 19
+          maxZoom: 19,
+          minZoom: 3
       });  
       
       tiles.addTo(map);
+        
+      var commonStyles = {
+              weight: 0,
+              stroke: false, 
+              fillOpacity: .5,
+          }
+      
+      var hydroLayer = L.geoJson(plants, {
+          pointToLayer: function (feature, latlng){
+              return L.circleMarker(latlng, commonStyles);
+          },
+      });
+        
+      var nuclearLayer = L.geoJson(plants, {
+          pointToLayer: function(feature, latlng){
+              return L.circleMarker(latlng, commonStyles);
+          },
+      });
+        
+      var petroLayer = L.geoJson(plants, {
+          pointToLayer: function(feature, latlng){
+              return L.circleMarker(latlng, commonStyles);
+          },
+      });  
+            
+        
+      function getRadius(val){
+          var radius = Math.sqrt(val/Math.PI);
+          return radius *.8;
+      }
+        
+      var layerInfo = {
+          hydroLayer: {source: "Hydro", color:'#306FFF'},
+          petroLayer: {source: "Petroleum", color:'#CE98FF'},
+          nuclearLayer: {source: "Nuclear", color:'#18FF6E'}
+      };
+      
+      var geoJsonLayers = {};
+        
+      for(var layer in layerInfo){
+          geoJsonLayers[layer] = L.geoJson(plants, {
+              pointToLayer: function(feature, latlng) {
+                  return L.circleMarker(latlng, commonStyles);
+              },
+              filter: function (feature){
+                  if(feature.properties.fuel_source[layerInfo[layer].source]){
+                      return feature;
+                  }
+              },
+              style: function(feature){
+                  return {
+                      color: layerInfo[layer].color,
+                      fillColor: layerInfo[layer].color,
+                      radius: getRadius(feature.properties.fuel_source[layerInfo[layer].source])
+                  }
+              }
+          }).addTo(map);
+      } 
+//          console.log(layer, layerInfo[layer])
+          
+      var sourceLabels = {
+          "<b style= 'color:#306FFF'>Hydro</b>": geoJsonLayers.hydroLayer,
+          "<b style= 'color:#CE98FF'>Petroleum</b>": geoJsonLayers.petroLayer,
+          "<b style= 'color:#18FF6E;text-shadow: 1px 0px 1px #333;'>Nuclear</b>": geoJsonLayers.nuclearLayer
+      }
+      
+      L.control.layers(null, sourceLabels, {collapsed:false}).addTo(map);
+        
+      map.on('click', function(e){
+          for(var l in layerInfo){
+          geoJsonLayers[l].eachLayer(function(layer){
+              var distance = e.latlng.distanceTo(layer.getLatLng())/1000;
+//              console.log(distance);
+              
+              if(distance > 500){
+                  layer.setStyle({
+                      stroke: false,
+                      fill: false
+                  });
+              }else{
+                  layer.setStyle({
+                      stroke: true,
+                      fill: true,
+                  });
+        
+                  var props = layer.feature.properties;
+                  var content = "<b>" + layer.feature.properties.plant_name + "</b><br>";
+                                  
+                  content += "<b>" + layerInfo[l].source +"</b>: " +
+                      
+                  props.fuel_source[layerInfo[l].source].toLocaleString() + " MW <br>";
+                  
+                  content += "I am <b>" +distance.toLocaleString()+
+                                 "km</b><br> from the click point."
+                  layer.bindPopup(content);
+              }
+          });
+          }
+      })
+                                         
+      
+        
+        
                   
     </script>
     
