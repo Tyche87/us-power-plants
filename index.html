@@ -158,7 +158,7 @@
       map.on('click', function(e){
           for(var l in layerInfo){
           geoJsonLayers[l].eachLayer(function(layer){
-              var distance = e.latlng.distanceTo(layer.getLatLng())/1000;
+              var distance = e.latlng.distanceTo(layer.getLatLng())/(1000).toFixed(0);
 //              console.log(distance);
               
               if(distance > 500){
